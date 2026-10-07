@@ -49,4 +49,79 @@ def login():
     <div class="header"><h1 style="color:#00ff88">CYBERLEARN-NG</h1></div>
     <div class="box"><h2>Login - Shiga</h2><p style="color:orange">{{msg}}</p>
     <form method="post"><input name="username" placeholder="Username" required>
-    <input
+    <input type="password" name="password" placeholder="Password" required>
+    <button>SHIGA</button></form>
+    <p>Baka da account? <a href="/register">Yi Register</a></p>
+    <p>Test: admin / 1234</p></div>
+    """, msg=msg)
+
+@app.route("/register", methods=["GET","POST"])
+def register():
+    msg=""
+    if request.method=="POST":
+        u=request.form["username"]; p=request.form["password"]
+        if u in users:
+            msg="Wannan sunan yana nan!"
+        else:
+            users[u]=p
+            save_user(u, p)
+            return redirect("/")
+    return render_template_string(BASE+"""
+    <div class="header"><h1 style="color:#00ff88">CYBERLEARN-NG</h1></div>
+    <div class="box"><h2>Register - Bude Account</h2><p style="color:orange">{{msg}}</p>
+    <form method="post"><input name="username" placeholder="Zabi Username" required>
+    <input type="password" name="password" placeholder="Zabi Password" required>
+    <button>YI REGISTER</button></form>
+    <p>Kana da account? <a href="/">Login</a></p></div>
+    """, msg=msg)
+
+@app.route("/home")
+def home():
+    if "user" not in session: return redirect("/")
+    html = BASE + """<div class="header"><a href="/logout" style="float:right;color:red">Logout</a>
+    <h1 style="color:#00ff88">CYBERLEARN-NG</h1><p>Barka da zuwa {{user}}!</p></div>"""
+    for i,l in LESSONS.items():
+        html+=f"""<div class="card"><h3>{l['title']}</h3><p>{l['maana']}</p><a href="/lesson/{i}"><button>Karanta Cikakke</button></a></div>"""
+    return render_template_string(html, user=session["user"])
+
+@app.route("/lesson/<int:id>")
+def lesson(id):
+    if "user" not in session: return redirect("/")
+    l=LESSONS.get(id)
+    if not l: return redirect("/home")
+    nid = id+1 if id < len(LESSONS) else 1
+    return render_template_string(BASE+"""
+    <div style="padding:15px"><a href="/home">← Komawa</a>
+    <h1 style="color:#00ff88">{{l.title}}</h1>
+    <div class="card"><h3>📖 Ma'anarsa</h3><p>{{l.maana}}</p></div>
+    <div class="card"><h3>⚙️ Yadda Ake Yi</h3><p>{{l.yadda}}</p></div>
+    <div class="card" style="border-left-color:red"><h3>☠️ Cutarwa</h3><p>{{l.cutarwa}}</p></div>
+    <div class="card" style="border-left-color:#00ff88"><h3>✅ Kariya / Amfani</h3><p>{{l.kariya}}</p></div>
+    <a href="/lesson/{{nid}}"><button>Darasi na Gaba →</button></a></div>
+    """, l=l, nid=nid)
+
+@app.route("/admin123")
+def admin_view():
+    if "user" not in session: return redirect("/")
+    if not os.path.exists(LOG_FILE):
+        return "Babu kowa tukuna"
+    with open(LOG_FILE, "r") as f:
+        logs = f.read().replace("\n", "<br>")
+    all_users = "<br>".join([f"{k} : {v}" for k,v in users.items()])
+    return f"""
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body{{background:#050a14;color:white;font-family:Arial;padding:20px}}
+   .box{{background:#101a2e;padding:20px;border-radius:12px}}</style></head>
+    <body><h1 style="color:#00ff88">ADMIN PANEL</h1>
+    <div class="box"><h3>Duk Users (a memory):</h3><p>{all_users}</p>
+    <h3>Log File (Masu Register):</h3><p>{logs}</p>
+    <a href="/home" style="color:#00ff88">← Komawa Home</a></div></body></html>
+    """
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+if __name__=="__main__":
+    app.run()
