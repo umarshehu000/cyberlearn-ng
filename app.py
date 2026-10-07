@@ -1,105 +1,99 @@
-from from flask import Flask, render_template_string
+from flask import Flask, render_template_string, request, redirect, session
 
 app = Flask(__name__)
+app.secret_key = "cyberlearn-2026-final"
+
+# Asalin users
+users = {"admin": "1234"}
 
 LESSONS = {
- 1: {"title":"1. Menene Phishing?",
-     "maana":"Phishing wata dabara ce da yan damfara ke amfani da ita. Suna turo maka sako kamar daga banki ko Facebook suna cewa 'Danna wannan link'.",
-     "yadda":"Suna turo link na karya. Idan ka danna, zai kai ka shafin da yayi kama da na gaskiya, sai su sace password dinka.",
-     "cutarwa":"Za su sace kudin banki, su sace account dinka, su ci mutuncinka, su yi damfara da sunanka.",
-     "amfani":"Idan ka san phishing, zaka gane sako na karya. Karka taba danna link daga mutumin da baka sani ba. Koyaushe duba link din da kyau."},
- 2: {"title":"2. Menene Strong Password?",
-     "maana":"Password mai karfi shine wanda yake da wahalar karyawa. Ba 12345 ba.",
-     "yadda":"Ka hada Harafi babba, karami, lamba, da alama. Misali: Zaria@2026#Secure!",
-     "cutarwa":"Idan password dinka rauni ne (kamar sunanka), hacker zai shiga account dinka cikin dakika 2.",
-     "amfani":"Password mai karfi yana kare kudin ka, hotunanka, da sirrinka. Kada ka yi amfani da password daya a ko'ina."},
- 3: {"title":"3. Menene Malware & Virus?",
-     "maana":"Malware wata software ce marar kyau da ake sakawa a wayarka ko computer domin cutar da ita ko sace bayanai.",
-     "yadda":"Yana shigowa ta hanyar downloading na karya, ko USB, ko link. Idan ya shiga zai boye a system.",
-     "cutarwa":"Zai rage gudu na waya, ya sace hotuna, ya lalata files, ya sa waya tayi zafi.",
-     "amfani":"Ka shigar da Antivirus, karka sauke app daga wajen Play Store, ka yi update a koda yaushe."},
- 4: {"title":"4. Social Engineering",
-     "maana":"Yaudara ce ta hankali. Ba wai sun karya computer ba, sun karya zuciyarka ne.",
-     "yadda":"Mutum zai kira ka yace 'Ni daga banki ne, bani PIN dinka'. Ko yace 'Ka ci kyauta'.",
-     "cutarwa":"Mutane suna rasa miliyoyi saboda wannan. Saboda sun yarda da magana mai dadi.",
-     "amfani":"Banki BAYA tambayar PIN ko OTP a waya. Duk wanda ya tambaye ka, damfara ne. Ka kashe wayar."},
- 5: {"title":"5. Public WiFi Hadari",
-     "maana":"WiFi na kyauta a cafe, makaranta, hotel - yana da hadari sosai.",
-     "yadda":"Hacker na iya zauna a kan WiFi daya da kai ya ga duk abinda kake yi - password, chat.",
-     "cutarwa":"Za su iya sace Facebook, WhatsApp, da banki idan ka yi amfani da free WiFi ba tare da kariya ba.",
-     "amfani":"Karka shiga banki da free WiFi. Yi amfani da Data dinka ko VPN. Kashe auto-connect na WiFi."}
+ 1: {"title":"1. Phishing","maana":"Phishing damfara ce ta email/sako na karya kamar daga banki.","yadda":"Suna turo link na karya. Idan ka danna ka saka password, sun sace.","cutarwa":"Satar kudi, satar account, bashi da sunanka.","kariya":"Karka danna link da baka sani ba. Koyaushe duba adireshin."},
+ 2: {"title":"2. Strong Password","maana":"Password mai karfi da ba a iya karyawa cikin sauki.","yadda":"Hada Babba, karami, lamba, alama. Mis: Zaria@2026!","cutarwa":"Password mai sauki hacker na karya shi cikin dakika 2.","kariya":"Kada ka maimaita password daya a ko'ina. Yi amfani da 12 harafi."},
+ 3: {"title":"3. Malware","maana":"Virus ne da ke lalata waya/computer.","yadda":"Yana shigowa ta app na karya ko file da ka sauke.","cutarwa":"Wayarka zata yi kasa, sata hotuna, lalata file.","kariya":"Kada ka sauke daga wajen Play Store. Saka Antivirus."},
+ 4: {"title":"4. Social Engineering","maana":"Yaudara ta tunani, ba hacking na computer ba.","yadda":"Wani ya kira ka yace 'Ni daga banki ne, bani PIN'.","cutarwa":"Ana sace miliyoyi da wannan hanyar.","kariya":"Banki BAYA tambayar PIN ko OTP a waya. Duk wanda ya tambaya BARAWO ne."},
+ 5: {"title":"5. Public WiFi","maana":"WiFi kyauta a wajen jama'a yana da hadari.","yadda":"Hacker da ke WiFi daya da kai zai iya ganin abinda kake yi.","cutarwa":"Za su iya daukar password na Facebook da Banki.","kariya":"Karka shiga banki da free WiFi. Yi amfani da Mobile Data."}
 }
 
-HOME_HTML = """
-<!DOCTYPE html>
-<html>
-<head><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CyberLearn-NG</title>
+BASE = """
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{background:#050a14;color:white;font-family:Arial;margin:0;padding:0}
-.header{background:#001122;padding:20px;text-align:center;border-bottom:2px solid #00ff88}
-.header h1{color:#00ff88;margin:0}
-.card{background:#101a2e;margin:15px;padding:20px;border-radius:12px;border-left:4px solid #00ff88}
-.btn{background:#00ff88;color:black;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px}
-.tag{background:#00ff8840;color:#00ff88;padding:4px 10px;border-radius:20px;font-size:12px}
-</style>
-</head>
-<body>
-<div class="header"><h1>CYBERLEARN-NG</h1><p>Platform na Koyon Cyber Security a Hausa</p></div>
-<div style="padding:15px">
-<h2>📚 Darussanmu ({{lessons|length}})</h2>
-{% for id, l in lessons.items() %}
-<div class="card">
-<span class="tag">Darasi {{id}}</span>
-<h3>{{l.title}}</h3>
-<a class="btn" href="/lesson/{{id}}">Karanta Darasi →</a>
-</div>
-{% endfor %}
-</div>
-</body>
-</html>
-"""
-
-LESSON_HTML = """
-<!DOCTYPE html>
-<html>
-<head><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{l.title}}</title>
-<style>
-body{background:#050a14;color:white;font-family:Arial;margin:0;padding:15px;line-height:1.6}
-.box{background:#101a2e;padding:20px;border-radius:12px;margin-bottom:15px;border:1px solid #222}
-h1{color:#00ff88}
-h3{color:#00ff88;margin-top:0}
+.box{max-width:500px;margin:20px auto;background:#101a2e;padding:25px;border-radius:15px;border:1px solid #00ff88}
+input{width:95%;padding:13px;margin:8px 0;border-radius:8px;border:none}
+button{width:98%;padding:13px;background:#00ff88;color:black;border:none;border-radius:8px;font-weight:bold;font-size:16px}
 a{color:#00ff88;text-decoration:none}
-.back{background:#222;padding:10px 20px;border-radius:8px}
+.header{background:#001122;padding:15px;text-align:center;border-bottom:2px solid #00ff88}
+.card{background:#101a2e;margin:12px;padding:18px;border-radius:12px;border-left:4px solid #00ff88}
 </style>
-</head>
-<body>
-<a class="back" href="/">← Komawa</a>
-<h1>{{l.title}}</h1>
-
-<div class="box"><h3>📖 Ma'anarsa:</h3><p>{{l.maana}}</p></div>
-<div class="box"><h3>⚙️ Yadda Ake Amfani Dashi / Yadda Yake Aiki:</h3><p>{{l.yadda}}</p></div>
-<div class="box" style="border-left:4px solid red"><h3>☠️ Cutarwarsa / Hadarinsa:</h3><p>{{l.cutarwa}}</p></div>
-<div class="box" style="border-left:4px solid #00ff88"><h3>✅ Amfaninsa / Yadda Zaka Kare Kanka:</h3><p>{{l.amfani}}</p></div>
-
-<div style="text-align:center;margin:30px">
-<a href="/lesson/{{next_id}}" style="background:#00ff88;color:black;padding:15px 30px;border-radius:10px;font-weight:bold">Darasi na gaba →</a>
-</div>
-</body>
-</html>
 """
 
-@app.route("/")
+@app.route("/", methods=["GET","POST"])
+def login():
+    msg=""
+    if request.method=="POST":
+        u=request.form["username"]; p=request.form["password"]
+        if u in users and users[u]==p:
+            session["user"]=u
+            return redirect("/home")
+        msg="Suna ko Password ba daidai ba!"
+    return render_template_string(BASE+"""
+    <div class="header"><h1 style="color:#00ff88">CYBERLEARN-NG</h1></div>
+    <div class="box"><h2>Login - Shiga</h2><p style="color:orange">{{msg}}</p>
+    <form method="post"><input name="username" placeholder="Username" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button>SHIGA</button></form>
+    <p>Baka da account? <a href="/register">Yi Register</a></p>
+    <p>Test: admin / 1234</p></div>
+    """, msg=msg)
+
+@app.route("/register", methods=["GET","POST"])
+def register():
+    msg=""
+    if request.method=="POST":
+        u=request.form["username"]; p=request.form["password"]
+        if u in users:
+            msg="Wannan sunan yana nan!"
+        else:
+            users[u]=p
+            return redirect("/")
+    return render_template_string(BASE+"""
+    <div class="header"><h1 style="color:#00ff88">CYBERLEARN-NG</h1></div>
+    <div class="box"><h2>Register - Bude Account</h2><p style="color:orange">{{msg}}</p>
+    <form method="post"><input name="username" placeholder="Zabi Username" required>
+    <input type="password" name="password" placeholder="Zabi Password" required>
+    <button>YI REGISTER</button></form>
+    <p>Kana da account? <a href="/">Login</a></p></div>
+    """, msg=msg)
+
+@app.route("/home")
 def home():
-    return render_template_string(HOME_HTML, lessons=LESSONS)
+    if "user" not in session: return redirect("/")
+    html = BASE + """<div class="header"><a href="/logout" style="float:right;color:red">Logout</a>
+    <h1 style="color:#00ff88">CYBERLEARN-NG</h1><p>Barka da zuwa {{user}}!</p></div>"""
+    for i,l in LESSONS.items():
+        html+=f"""<div class="card"><h3>{l['title']}</h3><p>{l['maana']}</p><a href="/lesson/{i}"><button>Karanta Cikakke</button></a></div>"""
+    return render_template_string(html, user=session["user"])
 
 @app.route("/lesson/<int:id>")
 def lesson(id):
-    l = LESSONS.get(id)
-    if not l: return redirect("/")
-    next_id = id+1 if id < len(LESSONS) else 1
-    return render_template_string(LESSON_HTML, l=l, next_id=next_id)
+    if "user" not in session: return redirect("/")
+    l=LESSONS.get(id)
+    if not l: return redirect("/home")
+    nid = id+1 if id < len(LESSONS) else 1
+    return render_template_string(BASE+"""
+    <div style="padding:15px"><a href="/home">← Komawa</a>
+    <h1 style="color:#00ff88">{{l.title}}</h1>
+    <div class="card"><h3>📖 Ma'anarsa</h3><p>{{l.maana}}</p></div>
+    <div class="card"><h3>⚙️ Yadda Ake Yi</h3><p>{{l.yadda}}</p></div>
+    <div class="card" style="border-left-color:red"><h3>☠️ Cutarwa</h3><p>{{l.cutarwa}}</p></div>
+    <div class="card" style="border-left-color:#00ff88"><h3>✅ Kariya / Amfani</h3><p>{{l.kariya}}</p></div>
+    <a href="/lesson/{{nid}}"><button>Darasi na Gaba →</button></a></div>
+    """, l=l, nid=nid)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
 
 if __name__=="__main__":
     app.run()
